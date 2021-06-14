@@ -2,6 +2,16 @@ from gym import core, spaces
 from dm_control import suite
 from dm_env import specs
 import numpy as np
+from copy import deepcopy
+
+
+def filter_dict_by_keys(dictionary, keys_to_exclude):
+    dictionary_copy = deepcopy(dictionary)
+    for k in keys_to_exclude:
+        if k not in dictionary_copy:
+            raise ValueError("To exclude a key, it must exist.")
+        del dictionary_copy[k]
+    return dictionary_copy
 
 
 def _spec_to_box(spec):
@@ -39,6 +49,7 @@ class DMCWrapper(core.Env):
         self,
         domain_name,
         task_name,
+        keys_to_exclude=[],
         task_kwargs=None,
         visualize_reward={},
         from_pixels=False,
@@ -82,18 +93,18 @@ class DMCWrapper(core.Env):
                 low=0, high=255, shape=shape, dtype=np.uint8
             )
         else:
-            self._observation_space = _spec_to_box(
-                self._env.observation_spec().values()
-            )
-            
-        self._state_space = _spec_to_box(
-                self._env.observation_spec().values()
-        )
+            obs_spec = filter_dict_by_keys(self._env.observation_spec(), keys_to_exclude)
+            self._observation_space = _spec_to_box(obs_spec.values())
+
+        obs_spec = filter_dict_by_keys(self._env.observation_spec(), keys_to_exclude)
+        self._state_space = _spec_to_box(obs_spec.values())
         
         self.current_state = None
 
         # set seed
         self.seed(seed=task_kwargs.get('random', 1))
+
+        self.keys_to_exclude = keys_to_exclude
 
     def __getattr__(self, name):
         return getattr(self._env, name)
@@ -108,7 +119,7 @@ class DMCWrapper(core.Env):
             if self._channels_first:
                 obs = obs.transpose(2, 0, 1).copy()
         else:
-            obs = _flatten_obs(time_step.observation)
+            obs = _flatten_obs(filter_dict_by_keys(time_step.observation, self.keys_to_exclude))
         return obs
 
     def _convert_action(self, action):
@@ -151,13 +162,13 @@ class DMCWrapper(core.Env):
             if done:
                 break
         obs = self._get_obs(time_step)
-        self.current_state = _flatten_obs(time_step.observation)
+        self.current_state = _flatten_obs(filter_dict_by_keys(time_step.observation, self.keys_to_exclude))
         extra['discount'] = time_step.discount
         return obs, reward, done, extra
 
     def reset(self):
         time_step = self._env.reset()
-        self.current_state = _flatten_obs(time_step.observation)
+        self.current_state = _flatten_obs(filter_dict_by_keys(time_step.observation, self.keys_to_exclude))
         obs = self._get_obs(time_step)
         return obs
 
