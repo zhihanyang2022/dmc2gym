@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/dmc2gym.iml" filepath="$PROJECT_DIR$/.idea/dmc2gym.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../off-policy-continuous-control/.idea/off-policy-continuous-control.iml" filepath="$PROJECT_DIR$/../off-policy-continuous-control/.idea/off-policy-continuous-control.iml" />
     </modules>
   </component>
 </project>

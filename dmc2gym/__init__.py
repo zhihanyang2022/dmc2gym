@@ -5,6 +5,7 @@ from gym.envs.registration import register
 def make(
         domain_name,
         task_name,
+        keys_to_exclude,
         seed=1,
         visualize_reward=True,
         from_pixels=False,
@@ -37,6 +38,7 @@ def make(
             kwargs=dict(
                 domain_name=domain_name,
                 task_name=task_name,
+                keys_to_exclude=keys_to_exclude,
                 task_kwargs=task_kwargs,
                 environment_kwargs=environment_kwargs,
                 visualize_reward=visualize_reward,
