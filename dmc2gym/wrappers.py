@@ -58,7 +58,8 @@ class DMCWrapper(core.Env):
         camera_id=0,
         frame_skip=1,
         environment_kwargs=None,
-        channels_first=True
+        channels_first=True,
+        track_prev_action=False
     ):
         assert 'random' in task_kwargs, 'please specify a seed, for deterministic behaviour'
         self._from_pixels = from_pixels
@@ -67,6 +68,7 @@ class DMCWrapper(core.Env):
         self._camera_id = camera_id
         self._frame_skip = frame_skip
         self._channels_first = channels_first
+        self._track_prev_action = track_prev_action
 
         # create task
         self._env = suite.load(
@@ -88,15 +90,20 @@ class DMCWrapper(core.Env):
 
         # create observation space
         if from_pixels:
+            assert not track_prev_action and len(keys_to_exclude) == 0
             shape = [3, height, width] if channels_first else [height, width, 3]
             self._observation_space = spaces.Box(
                 low=0, high=255, shape=shape, dtype=np.uint8
             )
         else:
-            obs_spec = filter_dict_by_keys(self._env.observation_spec(), keys_to_exclude)
-            self._observation_space = _spec_to_box(obs_spec.values())
+            if not self._track_prev_action:
+                obs_spec = filter_dict_by_keys(self._env.observation_spec(), keys_to_exclude)
+                self._observation_space = _spec_to_box(obs_spec.values())
+            else:
+                obs_spec = filter_dict_by_keys(self._env.observation_spec(), keys_to_exclude)
+                obs_spec["action"] = self._env.action_spec()
+                self._observation_space = _spec_to_box(obs_spec.values())
 
-        obs_spec = filter_dict_by_keys(self._env.observation_spec(), keys_to_exclude)
         self._state_space = _spec_to_box(obs_spec.values())
         
         self.current_state = None
@@ -149,6 +156,7 @@ class DMCWrapper(core.Env):
         self._observation_space.seed(seed)
 
     def step(self, action):
+
         assert self._norm_action_space.contains(action)
         action = self._convert_action(action)
         assert self._true_action_space.contains(action)
@@ -161,16 +169,24 @@ class DMCWrapper(core.Env):
             done = time_step.last()
             if done:
                 break
+
         obs = self._get_obs(time_step)
         self.current_state = _flatten_obs(filter_dict_by_keys(time_step.observation, self.keys_to_exclude))
+
         extra['discount'] = time_step.discount
-        return obs, reward, done, extra
+        if self._track_prev_action:
+            return np.concatenate([obs, action]), reward, done, extra
+        else:
+            return obs, reward, done, extra
 
     def reset(self):
         time_step = self._env.reset()
         self.current_state = _flatten_obs(filter_dict_by_keys(time_step.observation, self.keys_to_exclude))
         obs = self._get_obs(time_step)
-        return obs
+        if self._track_prev_action:
+            return np.concatenate([obs, np.zeros(*self._true_action_space.shape)])
+        else:
+            return obs
 
     def render(self, mode='rgb_array', height=None, width=None, camera_id=0):
         assert mode == 'rgb_array', 'only support rgb_array mode, given %s' % mode

@@ -6,6 +6,7 @@ def make(
         domain_name,
         task_name,
         keys_to_exclude,
+        track_prev_action,
         seed=1,
         visualize_reward=True,
         from_pixels=False,
@@ -48,6 +49,7 @@ def make(
                 camera_id=camera_id,
                 frame_skip=frame_skip,
                 channels_first=channels_first,
+                track_prev_action=track_prev_action
             ),
             max_episode_steps=max_episode_steps,
         )
