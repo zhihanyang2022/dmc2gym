@@ -6,7 +6,7 @@ def make(
         domain_name,
         task_name,
         keys_to_exclude,
-        track_prev_action,
+        track_prev_action=False,
         seed=1,
         visualize_reward=True,
         from_pixels=False,

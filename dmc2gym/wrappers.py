@@ -104,7 +104,7 @@ class DMCWrapper(core.Env):
                 obs_spec["action"] = self._env.action_spec()
                 self._observation_space = _spec_to_box(obs_spec.values())
 
-        self._state_space = _spec_to_box(obs_spec.values())
+            self._state_space = _spec_to_box(obs_spec.values())
         
         self.current_state = None
 
